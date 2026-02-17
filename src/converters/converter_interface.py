@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 class ConverterInterface:
     def __init__(self, input_file: str, output_dir: str, input_type: str, output_type: str):
@@ -29,7 +30,7 @@ class ConverterInterface:
         """
         raise NotImplementedError("can_convert method must be implemented by subclasses.")
     
-    def convert(self) -> list[str]:
+    def convert(self, overwrite: bool = True, quality: Optional[str] = None) -> list[str]:
         """
         Convert the input file to the output format.
         
@@ -38,6 +39,6 @@ class ConverterInterface:
             quality: Quality setting for conversion (e.g., "high", "medium", "low")
         
         Returns:
-            Path to the converted output file.
+            List of paths to the converted output files.
         """
         raise NotImplementedError("convert method must be implemented by subclasses.")
