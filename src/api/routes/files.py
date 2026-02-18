@@ -20,12 +20,10 @@ def list_files():
 
 @router.post("/")
 async def upload_file(file: UploadFile = File(...)):
-    """Upload a file for conversion"""
-
-    # File metadata from multipart request
+    """Upload a file and save it to the server"""
     file_save = FileSave(file)
     try:
-        metadata = file_save.save_file()
+        metadata = await file_save.save_file()
         return {"message": "File uploaded successfully", "metadata": metadata}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")

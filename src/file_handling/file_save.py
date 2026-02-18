@@ -1,79 +1,62 @@
 from db import FileDB
 from fastapi import UploadFile
 from pathlib import Path
-import os
-import uuid
-import hashlib
-import mimetypes
+import os, uuid, hashlib, mimetypes
 import magic
-import shutil
 
-mimetypes.add_type('application/yaml', '.yaml')
-mimetypes.add_type('application/yaml', '.yml')
+mimetypes.add_type("application/yaml", ".yaml")
+mimetypes.add_type("application/yaml", ".yml")
 
 class FileSave:
-  STORAGE_DIR = "data/uploads"
+    STORAGE_DIR = "data/uploads"
+    CHUNK_SIZE = 1024 * 1024  # 1MB
 
-  def __init__(self, file: UploadFile):
-    self.db = FileDB()
-    self.file = file
-    self.uuid_str = str(uuid.uuid4())
-    self.original_filename = file.filename
-    self.file_extension = Path(self.original_filename).suffix
-    self.unique_filename = f"{self.uuid_str}{self.file_extension}"
-    os.makedirs(self.STORAGE_DIR, exist_ok=True)
+    def __init__(self, file: UploadFile):
+        self.db = FileDB()
+        self.file = file
+        self.uuid_str = str(uuid.uuid4())
+        self.original_filename = file.filename or "upload"
+        self.file_extension = Path(self.original_filename).suffix.lower()
+        self.unique_filename = f"{self.uuid_str}{self.file_extension}"
+        os.makedirs(self.STORAGE_DIR, exist_ok=True)
 
-  def __compute_metadata(self, file_path: Path) -> dict:
-    """
-    Computes metadata for a given file path.
+    def __detect_media_type(self, file_path: Path) -> str:
+        media_type, _ = mimetypes.guess_type(self.original_filename)
+        if media_type in (None, "application/octet-stream"):
+            try:
+                media_type = magic.from_file(str(file_path), mime=True) or "application/octet-stream"
+            except Exception:
+                media_type = "application/octet-stream"
+        return media_type
 
-    Args:
-        file_path: Path to the file for which to compute metadata.
-    Returns:
-        metadata: dictionary containing file metadata.
-    """
-    file_size = file_path.stat().st_size
-    sha256_checksum = hashlib.sha256(file_path.read_bytes()).hexdigest()
-    
-    # Determine filetype based on the extension first
-    media_type, _ = mimetypes.guess_type(self.original_filename)
+    async def save_file(self) -> dict:
+        file_path = Path(self.STORAGE_DIR) / self.unique_filename
 
-    # Fallback to using python-magic to detect media type based on file content 
-    # if mimetypes fails to determine the media type
-    undesirable_types = [None, "application/octet-stream"]
-    if media_type in undesirable_types:
-      # Use python-magic to detect media type based on file content
-      media_type = magic.from_file(str(file_path), mime=True)
-      if media_type is None:
-        media_type = "application/octet-stream"
-    
-    metadata = {
-      "id": self.uuid_str,
-      "storage_path": str(file_path),
-      "original_filename": self.original_filename,
-      "media_type": media_type,
-      "extension": self.file_extension,
-      "size_bytes": file_size,
-      "sha256_checksum": sha256_checksum,
-      "stored_as": self.unique_filename
-    }
-    return metadata
+        hasher = hashlib.sha256()
+        size_bytes = 0
 
-  def save_file(self) -> dict:
-    """
-    Saves the uploaded file to disk, computes metadata, and stores metadata in the database. 
+        # Stream upload to disk and compute hash in one pass
+        with file_path.open("wb") as buffer:
+            while True:
+                chunk = await self.file.read(self.CHUNK_SIZE)
+                if not chunk:
+                    break
+                buffer.write(chunk)
+                hasher.update(chunk)
+                size_bytes += len(chunk)
 
-    Returns:
-        metadata: metadata dictionary.
-    """
-    # Save uploaded file
-    file_path = Path(self.STORAGE_DIR) / self.unique_filename
-    with file_path.open("wb") as buffer:
-      shutil.copyfileobj(self.file.file, buffer)
-    
-    # Compute & save file metadata
-    metadata = self.__compute_metadata(file_path)
-    self.db.insert_file_metadata(metadata)
+        media_type = self.__detect_media_type(file_path)
 
-    # Return metadata for response to user
-    return metadata
+        metadata = {
+            "id": self.uuid_str,
+            "storage_path": str(file_path),
+            "original_filename": self.original_filename,
+            "media_type": media_type,
+            "extension": self.file_extension,
+            "size_bytes": size_bytes,
+            "sha256_checksum": hasher.hexdigest(),
+            "stored_as": self.unique_filename,
+        }
+
+        self.db.insert_file_metadata(metadata)
+        return metadata
