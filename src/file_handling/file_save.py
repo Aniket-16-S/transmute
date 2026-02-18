@@ -1,7 +1,7 @@
 from db import FileDB
 from fastapi import UploadFile
 from pathlib import Path
-from core import get_settings
+from core import get_settings, detect_media_type
 import os, uuid, hashlib, mimetypes
 import magic
 
@@ -17,11 +17,6 @@ class FileSave:
         self.file_extension = Path(self.original_filename).suffix.lower()
         self.unique_filename = f"{self.uuid_str}{self.file_extension}"
         os.makedirs(self.STORAGE_DIR, exist_ok=True)
-
-    def __detect_media_type(self, file_path: Path) -> str:
-        # Use extensions as the media_type
-        media_type = file_path.suffix.lower().lstrip('.')
-        return media_type
 
     async def save_file(self) -> dict:
         file_path = Path(self.STORAGE_DIR) / self.unique_filename
@@ -39,7 +34,7 @@ class FileSave:
                 hasher.update(chunk)
                 size_bytes += len(chunk)
 
-        media_type = self.__detect_media_type(file_path)
+        media_type = detect_media_type(file_path)
 
         metadata = {
             "id": self.uuid_str,
