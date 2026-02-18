@@ -62,6 +62,15 @@ class ConverterRegistry:
         """
         return self.converters.get(name, None)
     
+    def get_formats(self):
+        """
+        Get a set of all supported formats across all registered converters.
+        
+        Returns:
+            Set of supported format strings
+        """
+        return set(self.format_map.keys())
+    
     def get_converters_for_format(self, format_type):
         """
         Get all converters that support a specific file format.
@@ -108,6 +117,50 @@ class ConverterRegistry:
                 result[name] = []
         return result
     
+    def get_compatible_formats(self, format_type):
+        """
+        Get all formats compatible with the given format.
+        
+        A format is considered compatible if there exists a converter that
+        supports both the given format and the compatible format, AND the
+        conversion is actually valid in that direction.
+        
+        Args:
+            format_type: File format (e.g., 'jpg', 'mp4', 'csv')
+        
+        Returns:
+            Set of compatible format strings
+        """
+        format_lower = format_type.lower()
+        compatible = set()
+        
+        # Find all converters that support this format
+        converters_for_format = self.get_converters_for_format(format_lower)
+        
+        # For each converter, determine valid output formats
+        for converter_class in converters_for_format:
+            if not hasattr(converter_class, 'get_formats_compatible_with'):
+                continue
+            
+            compatible.update(converter_class.get_formats_compatible_with(format_lower))
+        
+        return compatible
+    
+    def get_format_compatibility_matrix(self):
+        """
+        Get a complete compatibility matrix showing which formats can convert to which.
+        
+        Returns:
+            Dictionary mapping each format to its set of compatible output formats
+        """
+        matrix = {}
+        all_formats = set(self.format_map.keys())
+        
+        for fmt in all_formats:
+            matrix[fmt] = self.get_compatible_formats(fmt)
+        
+        return matrix
+    
 
 if __name__ == "__main__":
     print("Initializing converter registry...")
@@ -139,3 +192,27 @@ if __name__ == "__main__":
         print(f"  Found: {converter.__name__}")
     else:
         print("  No suitable converter found")
+    
+    print("\nExample: Compatible formats for 'jpg':")
+    compatible = registry.get_compatible_formats('jpg')
+    print(f"  {', '.join(sorted(compatible))}")
+    
+    print("\nExample: Compatible formats for 'mp4':")
+    compatible = registry.get_compatible_formats('mp4')
+    print(f"  {', '.join(sorted(compatible))}")
+    
+    print("\nExample: Compatible formats for 'csv':")
+    compatible = registry.get_compatible_formats('csv')
+    print(f"  {', '.join(sorted(compatible))}")
+    
+    print("\nExample: Compatible formats for 'mp3':")
+    compatible = registry.get_compatible_formats('mp3')
+    print(f"  {', '.join(sorted(compatible))}")
+    
+    print("\nExample: Compatible formats for 'gif':")
+    compatible = registry.get_compatible_formats('gif')
+    print(f"  {', '.join(sorted(compatible))}")
+
+    print("\nAll Formats:")
+    all_formats = registry.get_formats()
+    print(f"  {', '.join(sorted(all_formats))}")
