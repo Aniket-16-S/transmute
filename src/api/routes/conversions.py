@@ -1,5 +1,6 @@
 import json
-from fastapi import APIRouter, Path, Request
+from pathlib import Path
+from fastapi import APIRouter, Request
 from converters import ConverterInterface
 from registry import ConverterRegistry
 
