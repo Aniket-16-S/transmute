@@ -52,8 +52,9 @@ async def save_file(file: UploadFile) -> dict:
 
 @router.get("/")
 def list_files():
+    file_db = FileDB()
     """List all uploaded files"""
-    files = [f.name for f in UPLOAD_DIR.iterdir() if f.is_file()]
+    files = file_db.list_files()
     return {"files": files}
 
 

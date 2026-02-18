@@ -60,3 +60,10 @@ class FileDB:
             return None
         columns = [column[0] for column in cursor.description]
         return dict(zip(columns, row))
+
+    def list_files(self) -> list[dict]:
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT * FROM {self.TABLE_NAME}")
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        return [dict(zip(columns, row)) for row in rows]
