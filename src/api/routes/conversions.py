@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from converters import ConverterInterface
 from registry import ConverterRegistry
 from core import get_settings
-from db import ConversionDB, FileDB
+from db import ConversionDB, FileDB, ConversionRelationsDB
 
 
 router = APIRouter(prefix="/conversions", tags=["conversions"])
@@ -25,6 +25,7 @@ async def create_conversion(request: Request):
     body = await request.json()
     file_db = FileDB()
     conversion_db = ConversionDB()
+    conversion_relations_db = ConversionRelationsDB()
 
     og_id = body.get("id")
     input_format = body.get("input_format")
@@ -55,5 +56,9 @@ async def create_conversion(request: Request):
     converted_metadata['sha256_checksum'] = hashlib.sha256(moved_output_file.read_bytes()).hexdigest()
     converted_metadata.pop('created_at', None)  # Remove created_at from original metadata if it exists
     conversion_db.insert_file_metadata(converted_metadata)
+    conversion_relations_db.insert_conversion_relation({
+        'original_file_id': og_id,
+        'converted_file_id': converted_id
+    })
 
     return {"message": "Conversion created"}
