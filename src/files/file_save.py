@@ -5,6 +5,7 @@ import os
 import uuid
 import hashlib
 import mimetypes
+import magic
 import shutil
 
 class FileSave:
@@ -20,6 +21,12 @@ class FileSave:
     os.makedirs(self.STORAGE_DIR, exist_ok=True)
 
   def save_file(self) -> dict:
+    """
+    Saves the uploaded file to disk, computes metadata, and stores metadata in the database. 
+
+    Returns:
+        metadata: metadata dictionary.
+    """
     # Save uploaded file
     file_path = Path(self.STORAGE_DIR) / self.unique_filename
     with file_path.open("wb") as buffer:
@@ -27,7 +34,16 @@ class FileSave:
     # Compute file metadata
     file_size = file_path.stat().st_size
     sha256_checksum = hashlib.sha256(file_path.read_bytes()).hexdigest()
-    media_type = self.file.content_type or mimetypes.guess_type(self.original_filename)[0] or "application/octet-stream"
+    
+    # Use python-magic to detect media type based on file content
+    media_type = magic.from_file(str(file_path), mime=True)
+    
+    # Determine filetype based on the extension if magic fails to detect the media type
+    if media_type is None or media_type == "application/octet-stream":
+      media_type, _ = mimetypes.guess_type(self.original_filename)
+      if media_type is None:
+        media_type = "application/octet-stream"
+    
     # Store metadata in DB
     metadata = {
       "id": self.uuid_str,
@@ -40,4 +56,6 @@ class FileSave:
       "stored_as": self.unique_filename
     }
     self.db.insert_file_metadata(metadata)
+
+    # Return metadata for response to user
     return metadata
