@@ -1,8 +1,11 @@
-import some_module
+from fastapi import FastAPI
+from api import router
 
-def main():
-    print("Hello, World!")
-    print(some_module.some_function())
+app = FastAPI()
+
+# Include routes
+app.include_router(router)
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
