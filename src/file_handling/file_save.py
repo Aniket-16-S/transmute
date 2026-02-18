@@ -8,6 +8,9 @@ import mimetypes
 import magic
 import shutil
 
+mimetypes.add_type('application/yaml', '.yaml')
+mimetypes.add_type('application/yaml', '.yml')
+
 class FileSave:
   STORAGE_DIR = "data/uploads"
 
@@ -35,12 +38,15 @@ class FileSave:
     file_size = file_path.stat().st_size
     sha256_checksum = hashlib.sha256(file_path.read_bytes()).hexdigest()
     
-    # Use python-magic to detect media type based on file content
-    media_type = magic.from_file(str(file_path), mime=True)
-    
-    # Determine filetype based on the extension if magic fails to detect the media type
-    if media_type is None or media_type == "application/octet-stream":
-      media_type, _ = mimetypes.guess_type(self.original_filename)
+    # Determine filetype based on the extension first
+    media_type, _ = mimetypes.guess_type(self.original_filename)
+
+    # Fallback to using python-magic to detect media type based on file content 
+    # if mimetypes fails to determine the media type
+    undesirable_types = [None, "application/octet-stream"]
+    if media_type in undesirable_types:
+      # Use python-magic to detect media type based on file content
+      media_type = magic.from_file(str(file_path), mime=True)
       if media_type is None:
         media_type = "application/octet-stream"
     
