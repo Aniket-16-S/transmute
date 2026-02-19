@@ -1,4 +1,5 @@
 import os
+from core import media_type_aliases
 from typing import Optional
 
 class ConverterInterface:
@@ -16,8 +17,8 @@ class ConverterInterface:
         """
         self.input_file = input_file
         self.output_dir = output_dir
-        self.input_type = input_type
-        self.output_type = output_type
+        self.input_type = media_type_aliases.get(input_type.lower(), input_type.lower())
+        self.output_type = media_type_aliases.get(output_type.lower(), output_type.lower())
         
         # Create output directory if it doesn't exist
         os.makedirs(self.output_dir, exist_ok=True)
