@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Request
 from fastapi.responses import FileResponse
 from pathlib import Path
 from core import get_settings, detect_media_type
-from db.file_db import FileDB
+from db import FileDB, ConversionDB, ConversionRelationsDB
 from registry import ConverterRegistry
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -90,9 +90,18 @@ def get_file(file_id: str):
 def delete_file(file_id: str):
     """Delete an uploaded file"""
     # Find file with matching ID
-    for file_path in UPLOAD_DIR.iterdir():
-        if file_path.stem == file_id:
-            file_path.unlink()
-            return {"message": "File deleted successfully"}
-    
-    raise HTTPException(status_code=404, detail="File not found")
+    file_db = FileDB()
+    converted_file_db = ConversionDB()
+    conversion_rel_db = ConversionRelationsDB()
+    converted_file_id = conversion_rel_db.get_conversion_from_file(file_id)
+    file_metadata = file_db.get_file_metadata(file_id)
+    if file_metadata is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    os.unlink(file_metadata['storage_path'])
+    if converted_file_id:
+        converted_file_metadata = converted_file_db.get_file_metadata(converted_file_id)
+        os.unlink(converted_file_metadata['storage_path'])
+        converted_file_db.delete_file_metadata(converted_file_id)
+        conversion_rel_db.delete_relation_by_original(file_id)
+    file_db.delete_file_metadata(file_id)
+    return {"message": "File deleted successfully"}

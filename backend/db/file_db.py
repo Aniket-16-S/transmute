@@ -67,3 +67,7 @@ class FileDB:
         rows = cursor.fetchall()
         columns = [column[0] for column in cursor.description]
         return [dict(zip(columns, row)) for row in rows]
+
+    def delete_file_metadata(self, file_id: str):
+        with self.conn:
+            self.conn.execute(f"DELETE FROM {self.TABLE_NAME} WHERE id = ?", (file_id,))

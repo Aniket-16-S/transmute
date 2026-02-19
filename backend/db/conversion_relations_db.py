@@ -36,6 +36,26 @@ class ConversionRelationsDB:
                 metadata['converted_file_id']
             ))
     
+    def get_conversion_from_file(self, original_file_id: str) -> dict | None:
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT * FROM {self.TABLE_NAME} WHERE original_file_id = ?", (original_file_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return row[1]
+    
+    def get_original_from_conversion(self, converted_file_id: str) -> dict | None:
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT * FROM {self.TABLE_NAME} WHERE converted_file_id = ?", (converted_file_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return row[0]
+    
+    def delete_relation_by_original(self, original_file_id: str):
+        with self.conn:
+            self.conn.execute(f"DELETE FROM {self.TABLE_NAME} WHERE original_file_id = ?", (original_file_id,))
+    
     def list_relations(self) -> list[dict]:
         cursor = self.conn.cursor()
         cursor.execute(f"SELECT * FROM {self.TABLE_NAME}")
