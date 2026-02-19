@@ -7,29 +7,31 @@
   Transmute
 </h1>
 
-> [!WARNING]  
-> I quite literally *just* launched this project, and it will be under active development for some time - however I would love for you to come along and enjoy the ride! Leave a star
-> - Chase
+The self-hosted file converter that lets you convert anything, anywhere.
 
-Self-Hosted file converter (WIP!)
+This application is under active development, want to support us? Give us a star or jump in and contribute!
 
 ## What Does Transmute Replace?
-- https://www.freeconvert.com/
-- https://cloudconvert.com/
-- https://convertio.co/
-- https://file-converter.org/
+*For the record, I love all of these services and use them all frequently. But we are self-hosters, we like our data local only any time we can manage it.*
+| Service | Why Replace? |
+| ------- | --------------- |
+| [cloudconvert.com](https://cloudconvert.com/) |  File size limits, API is paid only, 3rd-party gets my files |
+| [freeconvert.com](https://www.freeconvert.com/) | File size limits, 3rd-party gets my files |
+| [cconvertio.co](https://convertio.co/) | File size limits, 3rd-party gets my files |
 
 
 ## Status
 This project is under heavy development, come back soon to see where it goes!
 
 ## Diagrams
-Shoutout to draw.io (formerly diagrams.net) I love their software and have always planned out projects using it. Recently I discovered [@hediet](https://github.com/hediet) has a [draw.io vscode extension](https://github.com/hediet/vscode-drawio) so now we have our diagrams stored in git at [docs/diagrams/source](docs/diagrams/source). 
+Shoutout to [draw.io](https://www.drawio.com/) - formerly diagrams.net. I love their software and have always planned out projects using it. 
+
+Recently I discovered [@hediet](https://github.com/hediet) has a [draw.io vscode extension](https://github.com/hediet/vscode-drawio) so now we have our diagrams stored in git at [docs/diagrams/source](docs/diagrams/source). 
 
 They are also exported to [docs/diagrams/exports](docs/diagrams/source) for easy viewing from the UI.
 
 ## API Call Flow
-*Just drafting as of now, will likely change I can already see some issues with it*
+
 ### Starting a Conversion
 1. Upload the file you wish to convert
 ```bash
