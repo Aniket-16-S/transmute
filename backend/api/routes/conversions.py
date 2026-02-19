@@ -10,15 +10,27 @@ from db import ConversionDB, FileDB, ConversionRelationsDB
 
 
 router = APIRouter(prefix="/conversions", tags=["conversions"])
-regisitry = ConverterRegistry()
+registry = ConverterRegistry()
 settings = get_settings()
 UPLOAD_DIR = settings.upload_dir
 TEMP_DIR = settings.tmp_dir
 CONVERTED_DIR = settings.output_dir
 
-@router.get("/")
+@router.get("/complete")
 def list_conversions():
-    return {"conversions": []}
+    conv_db = ConversionDB()
+    file_db = FileDB()
+    conv_rel_db = ConversionRelationsDB()
+    converted_files = conv_db.list_files()
+    og_files = file_db.list_files()
+    converted_files_dict = {f['id']: f for f in converted_files}
+    og_files_dict = {f['id']: f for f in og_files}
+    relations = conv_rel_db.list_relations()
+    for rel in relations:        
+        og_id = rel['original_file_id']
+        conv_id = rel['converted_file_id']
+        og_files_dict[og_id]['conversion'] = converted_files_dict.get(conv_id)
+    return {"conversions": list(og_files_dict.values())}
 
 @router.post("/")
 async def create_conversion(request: Request):
@@ -40,7 +52,7 @@ async def create_conversion(request: Request):
         return {"error": f"No file found with id {og_id}"}
     
     # Find the appropriate converter for this conversion
-    converter_type = regisitry.get_converter_for_conversion(input_format, output_format)
+    converter_type = registry.get_converter_for_conversion(input_format, output_format)
     if converter_type is None:
         return {"error": f"No converter found for {input_format} to {output_format}"}
 

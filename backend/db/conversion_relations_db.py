@@ -35,3 +35,15 @@ class ConversionRelationsDB:
                 metadata['original_file_id'],
                 metadata['converted_file_id']
             ))
+    
+    def list_relations(self) -> list[dict]:
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT * FROM {self.TABLE_NAME}")
+        rows = cursor.fetchall()
+        return [
+            {
+                'original_file_id': row[0],
+                'converted_file_id': row[1]
+            }
+            for row in rows
+        ]
