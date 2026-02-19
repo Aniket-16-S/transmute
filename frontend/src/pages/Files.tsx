@@ -24,6 +24,7 @@ function Files() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchConversions = async () => {
@@ -68,6 +69,19 @@ function Files() {
       setError(err instanceof Error ? err.message : 'Download failed')
     } finally {
       setDownloadingId(null)
+    }
+  }
+
+  const handleDelete = async (fileId: string) => {
+    setDeletingId(fileId)
+    try {
+      const response = await fetch(`/api/files/${fileId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Delete failed')
+      setConversions(prev => prev.filter(f => f.id !== fileId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -124,13 +138,22 @@ function Files() {
                     {(file.size_bytes / 1024).toFixed(1)} KB → {(file.conversion!.size_bytes / 1024).toFixed(1)} KB
                   </p>
                 </div>
-                <button
-                  onClick={() => handleDownload(file.conversion!)}
-                  disabled={downloadingId === file.conversion!.id}
-                  className="flex-shrink-0 bg-success hover:bg-success-dark text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {downloadingId === file.conversion!.id ? 'Downloading...' : 'Download'}
-                </button>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleDownload(file.conversion!)}
+                    disabled={downloadingId === file.conversion!.id}
+                    className="bg-success hover:bg-success-dark text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {downloadingId === file.conversion!.id ? 'Downloading...' : 'Download'}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(file.id)}
+                    disabled={deletingId === file.id}
+                    className="bg-primary/20 hover:bg-primary/40 text-primary-light text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingId === file.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
