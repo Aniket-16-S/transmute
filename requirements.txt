@@ -6,3 +6,4 @@ openpyxl==3.1.5
 fastapi==0.129.0
 python-multipart==0.0.22
 python-magic==0.4.27
+pillow_heif==1.2.1
