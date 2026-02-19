@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-function Home() {
+function Converter() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<any>(null)
@@ -234,4 +234,4 @@ function Home() {
   )
 }
 
-export default Home
+export default Converter
