@@ -1,8 +1,30 @@
 import os
+import sys
 from pathlib import Path
 from typing import Optional
+from io import BytesIO
 from PIL import Image
 from pillow_heif import HeifImagePlugin
+
+# Add Homebrew library paths for Cairo on macOS
+# This is a temporary workaround until we can get Docker properly set up
+if sys.platform == 'darwin':  # macOS
+    os.environ['DYLD_LIBRARY_PATH'] = '/opt/homebrew/lib:/usr/local/lib:' + os.environ.get('DYLD_LIBRARY_PATH', '')
+    # Also try to help ctypes find the library
+    import ctypes.util
+    original_find_library = ctypes.util.find_library
+    def custom_find_library(name):
+        # Try homebrew paths first
+        for prefix in ['/opt/homebrew', '/usr/local']:
+            for lib_dir in ['lib', 'lib64']:
+                for ext in ['dylib', 'so']:
+                    path = f"{prefix}/{lib_dir}/lib{name}.{ext}"
+                    if os.path.exists(path):
+                        return path
+        return original_find_library(name)
+    ctypes.util.find_library = custom_find_library
+
+import cairosvg
 from .converter_interface import ConverterInterface
 
 class PillowConverter(ConverterInterface):
@@ -20,7 +42,8 @@ class PillowConverter(ConverterInterface):
         'pbm', 
         'pcx',
         'heif',
-        'heic'
+        'heic',
+        'svg'
     }
     def __init__(self, input_file: str, output_dir: str, input_type: str, output_type: str):
         """
@@ -51,6 +74,21 @@ class PillowConverter(ConverterInterface):
         
         # All supported image format conversions are valid with Pillow
         return True
+
+    @classmethod
+    def get_formats_compatible_with(cls, format_type: str) -> set:
+        """
+        Get the set of compatible formats for conversion.
+        
+        Args:
+            format_type: The input format to check compatibility for.
+        Returns:
+            Set of compatible formats.
+        """
+        base_formats = super().get_formats_compatible_with(format_type)
+        # Can convert FROM SVG but not TO SVG (rasterization only)
+        base_formats.discard('svg')
+        return base_formats
     
     def convert(self, overwrite: bool = True, quality: Optional[str] = None) -> list[str]:
         """
@@ -88,8 +126,15 @@ class PillowConverter(ConverterInterface):
             return [output_file]
         
         try:
-            # Open the image
-            img = Image.open(self.input_file)
+            # Handle SVG input specially
+            input_fmt = self.input_type.lower()
+            if input_fmt == 'svg':
+                # Convert SVG to PNG with transparency using cairosvg
+                png_data = cairosvg.svg2png(url=self.input_file)
+                img = Image.open(BytesIO(png_data))
+            else:
+                # Open the image
+                img = Image.open(self.input_file)
             
             # Handle transparency for formats that don't support it
             output_fmt = self.output_type.lower()
