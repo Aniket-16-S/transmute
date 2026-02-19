@@ -28,9 +28,9 @@ async def create_conversion(request: Request):
     conversion_relations_db = ConversionRelationsDB()
 
     og_id = body.get("id")
-    input_format = body.get("input_format")
     output_format = body.get("output_format")
     og_metadata = file_db.get_file_metadata(og_id)
+    input_format = og_metadata['media_type']
     print(og_metadata)
     converted_id = str(uuid.uuid4())
     converted_metadata = dict(og_metadata)
@@ -61,4 +61,4 @@ async def create_conversion(request: Request):
         'converted_file_id': converted_id
     })
 
-    return {"message": "Conversion created"}
+    return converted_metadata
