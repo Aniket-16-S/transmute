@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import uuid
 import hashlib
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from converters import ConverterInterface
 from registry import ConverterRegistry
 from core import get_settings
@@ -43,37 +43,55 @@ async def create_conversion(
 ):
     body = await request.json()
 
-    og_id = body.get("id")
+    # Validate required fields
+    original_id = body.get("id")
     output_format = body.get("output_format")
-    og_metadata = file_db.get_file_metadata(og_id)
-    input_format = og_metadata['media_type']
-    print(og_metadata)
-    converted_id = str(uuid.uuid4())
-    converted_metadata = dict(og_metadata)
+    if not original_id or not output_format:
+        raise HTTPException(status_code=400, detail="Missing required fields: 'id' and 'output_format'")
 
-    # Ensure the original file was uploaded and exists in the database
-    if og_metadata is None:
-        return {"error": f"No file found with id {og_id}"}
+    # Ensure the original file exists in the database
+    original_metadata = file_db.get_file_metadata(original_id)
+    if original_metadata is None:
+        raise HTTPException(status_code=404, detail=f"No file found with id {original_id}")
+    
+    input_format = original_metadata['media_type']
     
     # Find the appropriate converter for this conversion
     converter_type = registry.get_converter_for_conversion(input_format, output_format)
     if converter_type is None:
-        return {"error": f"No converter found for {input_format} to {output_format}"}
+        raise HTTPException(
+            status_code=400, 
+            detail=f"No converter found for {input_format} to {output_format}"
+        )
 
-    converter: ConverterInterface = converter_type(f'{UPLOAD_DIR}/{og_id}.{input_format}', f'{TEMP_DIR}/', input_format, output_format)
+    # Perform the conversion
+    converter: ConverterInterface = converter_type(
+        f'{UPLOAD_DIR}/{original_id}.{input_format}', 
+        f'{TEMP_DIR}/', 
+        input_format, 
+        output_format
+    )
     output_files = converter.convert()
+    
+    # Move converted file to output directory
+    converted_id = str(uuid.uuid4())
     moved_output_file = Path(output_files[0]).rename(f'{CONVERTED_DIR}/{converted_id}.{output_format}')
 
+    # Create metadata for converted file
+    converted_metadata = dict(original_metadata)
     converted_metadata['id'] = converted_id
-    converted_metadata['media_type'] = f"{output_format}"
+    converted_metadata['media_type'] = output_format
     converted_metadata['extension'] = f".{output_format}"
     converted_metadata['storage_path'] = str(moved_output_file)
     converted_metadata['size_bytes'] = moved_output_file.stat().st_size
     converted_metadata['sha256_checksum'] = hashlib.sha256(moved_output_file.read_bytes()).hexdigest()
-    converted_metadata.pop('created_at', None)  # Remove created_at from original metadata if it exists
+    # Remove created_at from original metadata since it is different for converted
+    converted_metadata.pop('created_at', None)
+    
+    # Save to database
     conversion_db.insert_file_metadata(converted_metadata)
     conversion_relations_db.insert_conversion_relation({
-        'original_file_id': og_id,
+        'original_file_id': original_id,
         'converted_file_id': converted_id
     })
 
