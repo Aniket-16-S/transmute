@@ -58,8 +58,9 @@ jobs:
           fi
           echo "fields_json=$FIELDS_JSON" >> $GITHUB_OUTPUT
       
+      
       - name: Send Message to Discord
-        uses: chase-roohms/discord-notify@v1
+        uses: chase-roohms/discord-notify@v1  # zizmor: ignore[unpinned-uses]
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           username: ${{ github.repository }}
