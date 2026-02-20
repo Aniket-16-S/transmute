@@ -10,7 +10,23 @@ DB_PATH = settings.db_path
 UPLOAD_DIR = settings.upload_dir
 
 
-@router.get("/info")
+@router.get(
+        "/info", 
+        summary="Get application metadata", 
+        responses={
+            200: {
+                "description": "Application metadata",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "name": "Transmute",
+                            "version": "v1.0.0"
+                        }
+                    }
+                }
+            }
+        }
+)
 def app_info():
     """Return application metadata"""
     return {
@@ -19,13 +35,61 @@ def app_info():
     }
 
 
-@router.get("/live")
+@router.get(
+        "/live", 
+        summary="Liveness check", 
+        responses={
+            200: {
+                "description": "Liveness status",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "alive"
+                        }
+                    }
+                }
+            }
+        }
+)
 def liveness():
     """Simple liveness check to confirm the server is running"""
     return {"status": "alive"}
 
 
-@router.get("/ready")
+@router.get(
+        "/ready", 
+        summary="Readiness check", 
+        responses={
+            200: {
+                "description": "Readiness status",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "ready",
+                            "checks": {
+                                "database": "ok",
+                                "storage": "ok"
+                            }
+                        }
+                    }
+                }
+            },
+            503: {
+                "description": "Not ready with details on failed checks",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "not_ready",
+                            "checks": {
+                                "database": "error: unable to connect",
+                                "storage": "ok"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+)
 def readiness():
     """Readiness check to confirm the server is ready to handle requests"""
     checks = {}
