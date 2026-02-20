@@ -120,12 +120,14 @@ class DrawioConverter(ConverterInterface):
             # -p: page index (0 for first page)
             # -o: output file
             # --transparent: transparent background for PNG
+            # --no-sandbox: required for running in containers/non-root environments
             cmd = [
                 drawio_path,
                 '-x',
                 self.input_file,
                 '-p', '0',  # Export first page
                 '-o', output_file,
+                '--no-sandbox',  # Required for containerized environments
             ]
             
             # Add transparency for PNG format
@@ -137,7 +139,8 @@ class DrawioConverter(ConverterInterface):
                 cmd,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                timeout=30  # 30 second timeout to prevent hanging
             )
             
             # Verify output file was created
