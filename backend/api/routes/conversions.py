@@ -5,7 +5,7 @@ import hashlib
 from fastapi import APIRouter, Request, Depends
 from converters import ConverterInterface
 from registry import ConverterRegistry
-from core import get_settings
+from core import get_settings, sanitize_extension
 from db import ConversionDB, FileDB, ConversionRelationsDB
 from api.deps import get_file_db, get_conversion_db, get_conversion_relations_db
 
@@ -28,7 +28,7 @@ def list_conversions(
     converted_files_dict = {f['id']: f for f in converted_files}
     og_files_dict = {f['id']: f for f in og_files}
     relations = conv_rel_db.list_relations()
-    for rel in relations:        
+    for rel in relations:
         og_id = rel['original_file_id']
         conv_id = rel['converted_file_id']
         og_files_dict[og_id]['conversion'] = converted_files_dict.get(conv_id)
@@ -44,7 +44,7 @@ async def create_conversion(
     body = await request.json()
 
     og_id = body.get("id")
-    output_format = body.get("output_format")
+    output_format = sanitize_extension(body.get("output_format"))
     og_metadata = file_db.get_file_metadata(og_id)
     input_format = og_metadata['media_type']
     print(og_metadata)

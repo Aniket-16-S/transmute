@@ -14,3 +14,8 @@ def detect_media_type(file_path: Path) -> str:
         extension = mimetypes.guess_extension(media_type) or ""
     media_type = extension.lstrip('.').lower()
     return media_type
+
+def sanitize_extension(extension: str) -> str:
+    # Keep alphanumerics plus _, -, and ., normalize case.
+    cleaned = extension.strip().lstrip(".")
+    return "".join(ch for ch in cleaned if ch.isalnum() or ch in {"_", "-", "."}).lower()

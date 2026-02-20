@@ -5,7 +5,7 @@ import hashlib
 from fastapi import APIRouter, File, UploadFile, HTTPException, Request, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
-from core import get_settings, detect_media_type
+from core import get_settings, detect_media_type, sanitize_extension
 from db import FileDB, ConversionDB, ConversionRelationsDB
 from registry import ConverterRegistry
 from api.deps import get_file_db, get_conversion_db, get_conversion_relations_db
@@ -21,7 +21,7 @@ CONVERTED_DIR = settings.output_dir
 async def save_file(file: UploadFile, db: FileDB) -> dict:
     uuid_str = str(uuid.uuid4())
     original_filename = file.filename or "upload"
-    file_extension = Path(original_filename).suffix.lower()
+    file_extension = sanitize_extension(Path(original_filename).suffix.lower())
     unique_filename = f"{uuid_str}{file_extension}"
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
