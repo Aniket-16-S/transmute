@@ -48,17 +48,50 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PUBLIC_RO_TOKEN }}
 
-      - name: Run Docker Scout scan
+      - name: Run Docker Scout scan - Critical/High
         uses: docker/scout-action@f8c776824083494ab0d56b8105ba2ca85c86e4de  # v1.18.2
         with:
           command: cves
           image: transmute:scan
-          sarif-file: scout-report.sarif
+          sarif-file: scout-critical-high.sarif
           write-comment: false
+          only-severities: critical,high
+
+      - name: Run Docker Scout scan - Medium
+        uses: docker/scout-action@f8c776824083494ab0d56b8105ba2ca85c86e4de  # v1.18.2
+        with:
+          command: cves
+          image: transmute:scan
+          sarif-file: scout-medium.sarif
+          write-comment: false
+          only-severities: medium
+
+      - name: Run Docker Scout scan - Low
+        uses: docker/scout-action@f8c776824083494ab0d56b8105ba2ca85c86e4de  # v1.18.2
+        with:
+          command: cves
+          image: transmute:scan
+          sarif-file: scout-low.sarif
+          write-comment: false
+          only-severities: low
 
       - name: Upload Scout results to GitHub Advanced Security
         uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6  #  v4.32.3
         if: always()
         with:
-          sarif_file: scout-report.sarif
-          category: docker-scout
+          sarif_file: scout-critical-high.sarif
+          category: docker-scout-critical-high
+
+      - name: Upload Medium severity results
+        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6  #  v4.32.3
+        if: always()
+        with:
+          sarif_file: scout-medium.sarif
+          category: docker-scout-medium
+
+      - name: Upload Low severity results
+        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6  #  v4.32.3
+        if: always()
+        with:
+          sarif_file: scout-low.sarif
+          category: docker-scout-low
