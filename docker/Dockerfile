@@ -21,9 +21,10 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libmagic1 \
+    libjxl-tools \
     wget \
     xvfb \
-    && apt-get install --only-upgrade -y tar libjxl \
+    && apt-get install --only-upgrade -y tar \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Draw.io
