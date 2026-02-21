@@ -22,6 +22,12 @@ function Header() {
             >
               Files
             </Link>
+            <a
+              href="/api/docs/"
+              className="text-text hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition duration-200"
+            >
+              API Docs
+            </a>
           </div>
         </div>
       </nav>
