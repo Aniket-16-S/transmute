@@ -1,13 +1,5 @@
 import { useState, useEffect } from 'react'
-
-interface ConversionInfo {
-  id: string
-  original_filename: string
-  media_type: string
-  extension: string
-  size_bytes: number
-  created_at: string
-}
+import FileListItem, { FileInfo, ConversionInfo } from '../components/FileListItem'
 
 interface FileRecord {
   id: string
@@ -110,52 +102,28 @@ function Files() {
 
         {!loading && convertedFiles.length > 0 && (
           <div className="space-y-3">
-            {convertedFiles.map(file => (
-              <div
-                key={file.id}
-                className="bg-surface-light border border-surface-dark rounded-lg p-4 flex items-center gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-mono uppercase bg-surface-dark px-2 py-0.5 rounded text-text-muted">
-                      {file.media_type}
-                    </span>
-                    <span className="text-text-muted text-xs">→</span>
-                    <span className="text-xs font-mono uppercase bg-primary/20 px-2 py-0.5 rounded text-primary">
-                      {file.conversion!.media_type}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-text truncate">
-                    {(() => {
-                      const name = file.original_filename || 'download'
-                      const dot = name.lastIndexOf('.')
-                      const base = dot > 0 ? name.substring(0, dot) : name
-                      return base + (file.conversion!.extension || '')
-                    })()}
-                  </p>
-                  <p className="text-xs text-text-muted/70 mt-0.5">
-                    {new Date(file.created_at).toLocaleString()} &middot;{' '}
-                    {(file.size_bytes / 1024).toFixed(1)} KB → {(file.conversion!.size_bytes / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleDownload(file.conversion!)}
-                    disabled={downloadingId === file.conversion!.id}
-                    className="bg-success hover:bg-success-dark text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {downloadingId === file.conversion!.id ? 'Downloading...' : 'Download'}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(file.id)}
-                    disabled={deletingId === file.id}
-                    className="bg-primary/20 hover:bg-primary/40 text-primary-light text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {deletingId === file.id ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              </div>
-            ))}
+            {convertedFiles.map(file => {
+              const fileInfo: FileInfo = {
+                id: file.id,
+                original_filename: file.original_filename,
+                media_type: file.media_type,
+                extension: file.extension,
+                size_bytes: file.size_bytes,
+                created_at: file.created_at,
+              }
+              return (
+                <FileListItem
+                  key={file.id}
+                  file={fileInfo}
+                  conversion={file.conversion}
+                  onDownload={() => handleDownload(file.conversion!)}
+                  onDelete={() => handleDelete(file.id)}
+                  isDeleting={deletingId === file.id}
+                  isDownloading={downloadingId === file.conversion!.id}
+                  isPending={false}
+                />
+              )
+            })}
           </div>
         )}
       </div>
