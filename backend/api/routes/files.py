@@ -84,6 +84,8 @@ def delete_file_and_metadata(file_id: str, file_db: FileDB, raise_if_not_found: 
 def list_files(file_db: FileDB = Depends(get_file_db)):
     """List all uploaded files"""
     files = file_db.list_files()
+    for file in files:
+        file["compatible_formats"] = converter_registry.get_compatible_formats(file["media_type"])
     return {"files": files}
 
 

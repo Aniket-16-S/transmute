@@ -3,6 +3,7 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import Converter from './pages/Converter'
 import History from './pages/History'
+import Files from './pages/Files'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <main className="flex-grow overflow-auto">
           <Routes>
             <Route path="/" element={<Converter />} />
+            <Route path="/files" element={<Files />} />
             <Route path="/history" element={<History />} />
           </Routes>
         </main>

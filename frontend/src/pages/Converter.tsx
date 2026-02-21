@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import FileListItem, { FileInfo, ConversionInfo } from '../components/FileListItem'
 
 interface PendingFile {
@@ -12,6 +13,8 @@ interface CompletedConversion {
 }
 
 function Converter() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
   const [completedConversions, setCompletedConversions] = useState<CompletedConversion[]>([])
   const [uploading, setUploading] = useState(false)
@@ -21,6 +24,25 @@ function Converter() {
   const [convertingIndex, setConvertingIndex] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  // Handle files passed from Files page
+  useEffect(() => {
+    if (location.state?.files) {
+      const incomingFiles = location.state.files as FileInfo[]
+      const newPendingFiles: PendingFile[] = incomingFiles.map(file => {
+        const sortedFormats = file.compatible_formats
+          ? [...file.compatible_formats].sort()
+          : []
+        return {
+          file,
+          selectedFormat: sortedFormats[0] || '',
+        }
+      })
+      setPendingFiles(prev => [...newPendingFiles, ...prev])
+      // Clear the location state to prevent re-adding on refresh
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.state])
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
