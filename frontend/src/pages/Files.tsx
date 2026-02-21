@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FaCheckSquare, FaSquare } from 'react-icons/fa'
 import FileListItem, { FileInfo } from '../components/FileListItem'
 
 function Files() {
@@ -8,6 +9,7 @@ function Files() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingSelected, setDeletingSelected] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -56,6 +58,34 @@ function Files() {
     })
   }
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === files.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(files.map(f => f.id)))
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return
+    
+    setDeletingSelected(true)
+    const idsToDelete = Array.from(selectedIds)
+    
+    for (const fileId of idsToDelete) {
+      try {
+        const response = await fetch(`/api/files/${fileId}`, { method: 'DELETE' })
+        if (!response.ok) throw new Error('Delete failed')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Delete failed')
+      }
+    }
+    
+    setFiles(prev => prev.filter(f => !selectedIds.has(f.id)))
+    setSelectedIds(new Set())
+    setDeletingSelected(false)
+  }
+
   const handleBringToConverter = () => {
     const selectedFiles = files.filter(f => selectedIds.has(f.id))
     navigate('/', { state: { files: selectedFiles } })
@@ -64,16 +94,27 @@ function Files() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-dark to-surface-light p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 min-h-[4rem]">
           <h1 className="text-3xl font-bold text-primary">Files</h1>
-          {selectedIds.size > 0 && (
-            <button
-              onClick={handleBringToConverter}
-              className="bg-primary hover:bg-primary-dark text-text font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
-            >
-              Convert {selectedIds.size} File{selectedIds.size > 1 ? 's' : ''}
-            </button>
-          )}
+          <div className="flex gap-3">
+            {selectedIds.size > 0 && (
+              <>
+                <button
+                  onClick={handleBringToConverter}
+                  className="bg-success hover:bg-success-dark text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
+                >
+                  Convert {selectedIds.size} File{selectedIds.size > 1 ? 's' : ''}
+                </button>
+                <button
+                  onClick={handleDeleteSelected}
+                  disabled={deletingSelected}
+                  className="bg-primary/20 hover:bg-primary/40 text-primary-light font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deletingSelected ? 'Deleting...' : `Delete ${selectedIds.size} File${selectedIds.size > 1 ? 's' : ''}`}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -91,18 +132,28 @@ function Files() {
         )}
 
         {!loading && files.length > 0 && (
-          <div className="space-y-3">
-            {files.map(file => (
+          <>
+            <div className="mb-4 flex justify-start">
+              <button
+                onClick={toggleSelectAll}
+                className="bg-surface-light hover:bg-surface-dark text-text-muted hover:text-text text-sm font-medium py-1.5 px-4 rounded-lg transition duration-200"
+              >
+                {selectedIds.size === files.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div className="space-y-3">
+              {files.map(file => (
               <div
                 key={file.id}
                 className="flex items-center gap-3"
               >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(file.id)}
-                  onChange={() => toggleSelection(file.id)}
-                  className="w-5 h-5 rounded border-surface-dark bg-surface-dark text-primary focus:ring-2 focus:ring-primary cursor-pointer"
-                />
+                <button
+                  onClick={() => toggleSelection(file.id)}
+                  className="text-2xl text-primary hover:text-primary-light transition duration-200 cursor-pointer flex-shrink-0"
+                  aria-label={selectedIds.has(file.id) ? 'Deselect file' : 'Select file'}
+                >
+                  {selectedIds.has(file.id) ? <FaCheckSquare /> : <FaSquare />}
+                </button>
                 <div className="flex-1">
                   <FileListItem
                     file={file}
@@ -113,7 +164,8 @@ function Files() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>
