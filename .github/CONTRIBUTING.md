@@ -34,13 +34,27 @@ cd <repo>
 
 `pip3 install requirements.txt`
 
-### 3. Spin up the app locally
+### 3. Build the Frontend
+
+```
+cd ./frontend
+npm install
+npm run build
+```
+
+### 4. Spin up the app locally
 
 `python3 backend/main.py`
 
-Feel free to reach out via issue if you hit any snags here ^
+Feel free to reach out via issue if you hit any snags here. ^
 
-### 4. Create a Branch
+There are a few additional dependencies outside of npm / pip
+
+- ffmpeg
+- libmagic1
+- Drawio Desktop App
+
+### 5. Create a Branch
 
 ```bash
 git checkout -b feature/my-feature
