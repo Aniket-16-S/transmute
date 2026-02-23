@@ -4,7 +4,15 @@ from .media_types import media_type_aliases
 from .helper_functions import (
     detect_media_type,
     sanitize_extension,
-    delete_file_and_metadata
+    delete_file_and_metadata,
+    validate_sql_identifier
 )
 
-__all__ = ["get_settings", "detect_media_type", "sanitize_extension", "delete_file_and_metadata", "media_type_aliases"]
+__all__ = [
+    "get_settings", 
+    "detect_media_type", 
+    "sanitize_extension", 
+    "delete_file_and_metadata", 
+    "media_type_aliases",
+    "validate_sql_identifier"
+]

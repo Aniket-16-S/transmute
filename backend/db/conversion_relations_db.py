@@ -1,5 +1,5 @@
 import sqlite3
-from core import get_settings
+from core import get_settings, validate_sql_identifier
 
 class ConversionRelationsDB:
     settings = get_settings()
@@ -7,6 +7,8 @@ class ConversionRelationsDB:
     TABLE_NAME = settings.conversion_relations_table_name
 
     def __init__(self):
+        # Validate table name on initialization to prevent SQL injection
+        self.TABLE_NAME = validate_sql_identifier(self.TABLE_NAME)
         self.conn = sqlite3.connect(self.DB_PATH, check_same_thread=False)
         self.create_tables()
     
