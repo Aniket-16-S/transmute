@@ -5,7 +5,7 @@ import hashlib
 from fastapi import APIRouter, Depends, HTTPException
 from converters import ConverterInterface
 from registry import ConverterRegistry
-from core import get_settings, sanitize_extension, delete_file_and_metadata
+from core import get_settings, sanitize_extension, delete_file_and_metadata, validate_safe_path
 from db import ConversionDB, FileDB, ConversionRelationsDB
 from api.deps import get_file_db, get_conversion_db, get_conversion_relations_db
 from api.schemas import ConversionRequest, ConversionListResponse, FileMetadata, ErrorResponse, FileDeleteResponse
@@ -87,13 +87,17 @@ async def create_conversion(
     og_id = conversion_request.id
     output_format = sanitize_extension(conversion_request.output_format)
     og_metadata = file_db.get_file_metadata(og_id)
-    input_format = og_metadata['media_type']
-    converted_id = str(uuid.uuid4())
-    converted_metadata = dict(og_metadata)
 
     # Ensure the original file was uploaded and exists in the database
     if og_metadata is None:
         raise HTTPException(status_code=404, detail=f"No file found with id {og_id}")
+    
+    # Validate the original file's storage path
+    validate_safe_path(og_metadata['storage_path'], raise_exception=True)
+    
+    input_format = og_metadata['media_type']
+    converted_id = str(uuid.uuid4())
+    converted_metadata = dict(og_metadata)
     
     # Find the appropriate converter for this conversion
     converter_type = registry.get_converter_for_conversion(input_format, output_format)

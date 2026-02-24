@@ -4,12 +4,14 @@ import hashlib
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 from fastapi.responses import FileResponse
+from zipfile import ZipFile
+from io import BytesIO
 from pathlib import Path
-from core import get_settings, detect_media_type, sanitize_extension, delete_file_and_metadata
+from core import get_settings, detect_media_type, sanitize_extension, delete_file_and_metadata, validate_safe_path
 from db import FileDB, ConversionDB, ConversionRelationsDB
 from registry import ConverterRegistry
 from api.deps import get_file_db, get_conversion_db, get_conversion_relations_db
-from api.schemas import FileListResponse, FileUploadResponse, FileDeleteResponse, ErrorResponse
+from api.schemas import FileListResponse, FileUploadResponse, FileDeleteResponse, ErrorResponse, BatchDownloadRequest
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -124,13 +126,14 @@ def get_file(file_id: str):
     # Find file with matching ID
     for file_path in CONVERTED_DIR.iterdir():
         if file_path.stem == file_id:
+            # Validate path before serving
+            validate_safe_path(file_path, raise_exception=True)
             return FileResponse(
                 path=file_path,
                 filename=file_path.name,
                 media_type="application/octet-stream"
             )
     raise HTTPException(status_code=404, detail="File not found")
-
 
 @router.delete(
     "/{file_id}",

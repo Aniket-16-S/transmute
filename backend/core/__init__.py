@@ -5,7 +5,9 @@ from .helper_functions import (
     detect_media_type,
     sanitize_extension,
     delete_file_and_metadata,
-    validate_sql_identifier
+    validate_sql_identifier,
+    validate_safe_path,
+    validate_hexadecimal_filename
 )
 
 __all__ = [
@@ -14,5 +16,7 @@ __all__ = [
     "sanitize_extension", 
     "delete_file_and_metadata", 
     "media_type_aliases",
-    "validate_sql_identifier"
+    "validate_sql_identifier",
+    "validate_safe_path",
+    "validate_hexadecimal_filename"
 ]

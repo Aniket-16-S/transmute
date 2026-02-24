@@ -9,6 +9,8 @@ from pathlib import Path
 
 if TYPE_CHECKING:
     from db import FileDB
+    
+from core.settings import get_settings
 
 
 def validate_sql_identifier(identifier: str) -> str:
@@ -54,6 +56,150 @@ def sanitize_extension(extension: str) -> str:
     cleaned = extension.strip().lstrip(".")
     return "".join(ch for ch in cleaned if ch.isalnum() or ch in {"_", "-", "."}).lower()
 
+
+def validate_hexadecimal_filename(filename: str) -> bool:
+    """
+    Validate that a filename (without extension) is hexadecimal.
+    This is used to ensure files follow the UUID naming pattern.
+    
+    Args:
+        filename: The filename to validate (can include extension)
+        
+    Returns:
+        True if the filename stem is valid hexadecimal, False otherwise
+    """
+    # Get filename without extension
+    path = Path(filename)
+    stem = path.stem
+    
+    # Check if stem is non-empty and contains only hex characters
+    if not stem:
+        return False
+    
+    # Validate hexadecimal (UUIDs are hex with optional hyphens)
+    # Allow both "abc123" and "abc-123-def" formats
+    hex_pattern = re.compile(r'^[0-9a-fA-F-]+$')
+    return bool(hex_pattern.match(stem))
+
+
+def validate_safe_path(file_path: str | Path, raise_exception: bool = True) -> bool:
+    """
+    Validate that a file path is safe and within allowed directories.
+    
+    Security checks:
+    - Resolves path to absolute canonical form
+    - Ensures path is within allowed directories (data/uploads, data/tmp, data/outputs)
+    - Validates filename is hexadecimal (UUID pattern)
+    - Prevents path traversal attacks
+    
+    Args:
+        file_path: The file path to validate
+        raise_exception: If True, raise HTTPException on validation failure
+        
+    Returns:
+        True if path is safe, False otherwise
+        
+    Raises:
+        HTTPException: If raise_exception is True and validation fails
+    """
+    settings = get_settings()
+    
+    # Convert to Path object and resolve to absolute canonical path
+    # This automatically handles .., symlinks, etc.
+    try:
+        absolute_path = Path(file_path).resolve(strict=False)
+    except (ValueError, RuntimeError) as e:
+        if raise_exception:
+            raise HTTPException(status_code=400, detail=f"Invalid file path: {e}")
+        return False
+    
+    # Define allowed directories
+    allowed_dirs = [
+        settings.upload_dir.resolve(),
+        settings.tmp_dir.resolve(),
+        settings.output_dir.resolve()
+    ]
+    
+    # Check if path is within any allowed directory
+    is_within_allowed = any(
+        str(absolute_path).startswith(str(allowed_dir)) 
+        for allowed_dir in allowed_dirs
+    )
+    
+    if not is_within_allowed:
+        if raise_exception:
+            raise HTTPException(
+                status_code=403, 
+                detail="Access denied: File path is outside allowed directories"
+            )
+        return False
+    
+    # Validate filename is hexadecimal
+    if not validate_hexadecimal_filename(absolute_path.name):
+        if raise_exception:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filename: Must be hexadecimal (UUID format) with optional extension"
+            )
+        return False
+    
+    return True
+
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize a filename to prevent security issues like directory traversal.
+    
+    This implementation:
+    - Removes all path separators (/, \\)
+    - Strips control characters and null bytes
+    - Removes leading/trailing dots and spaces
+    - Prevents reserved Windows filenames
+    - Uses a whitelist approach for allowed characters
+    - Limits filename length
+    """
+    if not filename:
+        return "unnamed"
+    
+    # Remove any path separators and null bytes
+    cleaned = filename.replace("/", "").replace("\\", "").replace("\0", "")
+    
+    # Remove control characters (ASCII 0-31 and 127)
+    cleaned = "".join(ch for ch in cleaned if ord(ch) >= 32 and ord(ch) != 127)
+    
+    # Whitelist: only alphanumerics, underscore, hyphen, period, and space
+    cleaned = "".join(ch for ch in cleaned if ch.isalnum() or ch in {"_", "-", ".", " "})
+    
+    # Strip leading/trailing dots, spaces, and whitespace
+    cleaned = cleaned.strip(". ")
+    
+    # Check for Windows reserved names (case-insensitive)
+    reserved_names = {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    }
+    name_without_ext = cleaned.split(".")[0].upper()
+    if name_without_ext in reserved_names:
+        cleaned = f"_{cleaned}"
+    
+    # Limit length (255 is typical max for most filesystems, use 200 to be safe)
+    if len(cleaned) > 200:
+        # Try to preserve extension
+        parts = cleaned.rsplit(".", 1)
+        if len(parts) == 2:
+            name, ext = parts
+            max_name_len = 200 - len(ext) - 1
+            cleaned = f"{name[:max_name_len]}.{ext}"
+        else:
+            cleaned = cleaned[:200]
+    
+    # If we ended up with nothing, use a default
+    if not cleaned:
+        return "unnamed"
+    
+    return cleaned
+
 def delete_file_and_metadata(file_id: str, file_db: "FileDB", raise_if_not_found: bool = True):
     """Helper function to delete a file and its metadata from a file database."""
     metadata = file_db.get_file_metadata(file_id)
@@ -62,5 +208,10 @@ def delete_file_and_metadata(file_id: str, file_db: "FileDB", raise_if_not_found
             raise HTTPException(status_code=404, detail="File not found")
         else:
             return
-    os.unlink(metadata['storage_path'])
+    
+    # Validate the storage path before deleting
+    storage_path = metadata['storage_path']
+    validate_safe_path(storage_path, raise_exception=True)
+    
+    os.unlink(storage_path)
     file_db.delete_file_metadata(file_id)
