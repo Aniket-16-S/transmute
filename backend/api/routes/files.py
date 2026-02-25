@@ -121,17 +121,19 @@ async def upload_file(
         }
     }
 )
-def get_file(file_id: str):
-    """Download a converted file"""
-    # Find file with matching ID
-    for file_path in CONVERTED_DIR.iterdir():
-        if file_path.stem == file_id:
+def get_file(file_id: str, file_db: FileDB = Depends(get_file_db), conv_db: ConversionDB = Depends(get_conversion_db)):
+    """Download a file"""
+    # First check if file_id corresponds to an original uploaded file
+    for db in [file_db, conv_db]:
+        metadata = db.get_file_metadata(file_id)
+        if metadata is not None:
+            file_path = Path(metadata['storage_path'])
             # Validate path before serving
             validate_safe_path(file_path, raise_exception=True)
             return FileResponse(
                 path=file_path,
-                filename=file_path.name,
-                media_type="application/octet-stream"
+                filename=metadata['original_filename'],
+                media_type=metadata['media_type']
             )
     raise HTTPException(status_code=404, detail="File not found")
 
