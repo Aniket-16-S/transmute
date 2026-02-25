@@ -24,6 +24,7 @@ function Converter() {
   const [convertingIndex, setConvertingIndex] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [downloadingAll, setDownloadingAll] = useState(false)
 
   // Handle files passed from Files page
   useEffect(() => {
@@ -215,6 +216,41 @@ function Converter() {
     }
   }
 
+  const handleDownloadAll = async () => {
+    if (completedConversions.length === 0) return
+    setDownloadingAll(true)
+    setError(null)
+
+    try {
+      const conversionIds = completedConversions.map(cc => cc.conversion.id)
+      const response = await fetch('/api/files/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file_ids: conversionIds
+        })
+      })
+
+      if (!response.ok) throw new Error('Batch download failed')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `transmute_batch_${new Date().toISOString().split('T')[0]}.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Batch download failed')
+    } finally {
+      setDownloadingAll(false)
+    }
+  }
+
   const hasPendingFiles = pendingFiles.length > 0
   const hasCompletedConversions = completedConversions.length > 0
   const hasStarted = hasPendingFiles || hasCompletedConversions
@@ -332,9 +368,20 @@ function Converter() {
         {/* Completed conversions section */}
         {hasCompletedConversions && (
           <div>
-            <h2 className="text-xl font-semibold text-text mb-4">
-              Completed Conversions ({completedConversions.length})
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-text">
+                Completed Conversions ({completedConversions.length})
+              </h2>
+              {completedConversions.length > 1 && (
+                <button
+                  onClick={handleDownloadAll}
+                  disabled={downloadingAll}
+                  className="bg-success hover:bg-success-dark text-white font-semibold py-2 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {downloadingAll ? 'Downloading...' : `Download All ${completedConversions.length} Files`}
+                </button>
+              )}
+            </div>
             <div className="space-y-3">
               {completedConversions.map((cc) => (
                 <FileListItem
